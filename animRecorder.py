@@ -13,7 +13,7 @@ class AnimationRecorder(object):
         suffix = '_LOC'
         
         if (self.ctrls == None):
-            cmds.warning('You must select something!')
+            cmds.warning('You must add something to the Selected Controls window!')
         else:
             #creates locators and parent constrain it to the selected controls
             for i in range(len(self.ctrls)):
@@ -47,17 +47,25 @@ class AnimationRecorder(object):
                     cmds.parentConstraint(self.locators[i], self.ctrls[i], mo=False, skipRotate = ["x","y","z"])
             
             #bakes animation into controls and deletes constraints
-            cmds.bakeResults(self.ctrls, simulation=False, smart=True, sparseAnimCurveBake=True, time=(self.minTime, self.maxTime))
+            bakeAnim = not(cmds.checkBox('bakeAnimation', query=True, value=True))
+            print 'bakeAnim:'
+            print bakeAnim
+            cmds.bakeResults(self.ctrls, simulation=False, smart=True, preserveOutsideKeys=True, removeBakedAttributeFromLayer = False,
+                                disableImplicitControl=True, sampleBy=2, sparseAnimCurveBake=True,
+                                removeBakedAnimFromLayer= False, bakeOnOverrideLayer=False,minimizeRotation=True, controlPoints=False, shape=True,
+                                time=(self.minTime, self.maxTime))
             #deletes locators and temp constraints
             cmds.delete(self.locatorsSelection)
 
-            #applying Euler filter to all the controls
-            cmds.select(clear=True)
-            for control in self.ctrls:
-                cmds.select(control, add=True)
-            controlsSelection = cmds.ls(selection=True)
-            cmds.filterCurve(controlsSelection, filter='euler')
-            cmds.select(clear=True)
+            #applying Euler filter to all the controls if euler filter option is True
+            if (cmds.checkBox('eulerFilter', query=True, value=True)):
+                cmds.select(clear=True)
+                for control in self.ctrls:
+                    cmds.select(control, add=True)
+                controlsSelection = cmds.ls(selection=True)
+                cmds.filterCurve(controlsSelection, filter='euler')
+                cmds.select(clear=True)
+        
         else:
             cmds.warning('Nothing to Transfer!')
 
@@ -93,9 +101,9 @@ class AnimationRecorder(object):
         cmds.textScrollList('controlsOnWindow',numberOfRows=15)
         cmds.rowLayout(numberOfColumns=4, columnWidth4=(110,40,80,70), height=30, columnAttach4=('right','left','right', 'left'))
         cmds.text('Bake Animation:')
-        cmds.checkBox(label='')
+        cmds.checkBox('bakeAnimation', label='', value=False)
         cmds.text('Euler Filter:')
-        cmds.checkBox(label='', value=True)
+        cmds.checkBox('eulerFilter', label='', value=True)
         cmds.setParent('..')
         cmds.rowLayout(numberOfColumns=2, columnWidth2=(150,150),columnAttach2=('right','right'))
         cmds.button( label='Record Animation', command=self.recordAnimOnLocators, height=50,width=150 )
